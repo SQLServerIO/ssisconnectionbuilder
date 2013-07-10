@@ -1,0 +1,153 @@
+<?xml version="1.0" standalone="yes"?>
+<DocumentElement>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>smallint</SQLServerDataType>
+    <SSISDataType>two-byte signed integer</SSISDataType>
+    <SSISExpression>DT_I2</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>int</SQLServerDataType>
+    <SSISDataType>four-byte signed integer</SSISDataType>
+    <SSISExpression>DT_I4</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>bigint</SQLServerDataType>
+    <SSISDataType>eight-byte signed integer</SSISDataType>
+    <SSISExpression>DT_I8</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>tinyint</SQLServerDataType>
+    <SSISDataType>single-byte unsigned integer</SSISDataType>
+    <SSISExpression>DT_UI1</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>real</SQLServerDataType>
+    <SSISDataType>float</SSISDataType>
+    <SSISExpression>DT_R4</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>float</SQLServerDataType>
+    <SSISDataType>double-precision</SSISDataType>
+    <SSISExpression>DT_R8</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>varchar</SQLServerDataType>
+    <SSISDataType>string</SSISDataType>
+    <SSISExpression>DT_STR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>char</SQLServerDataType>
+    <SSISDataType>string</SSISDataType>
+    <SSISExpression>DT_STR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>nchar</SQLServerDataType>
+    <SSISDataType>Unicode text stream</SSISDataType>
+    <SSISExpression>DT_WSTR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>nvarchar</SQLServerDataType>
+    <SSISDataType>Unicode text stream</SSISDataType>
+    <SSISExpression>DT_WSTR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>sql_variant</SQLServerDataType>
+    <SSISDataType>Unicode text stream</SSISDataType>
+    <SSISExpression>DT_WSTR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>xml</SQLServerDataType>
+    <SSISDataType>Unicode text stream</SSISDataType>
+    <SSISExpression>DT_WSTR</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>bit</SQLServerDataType>
+    <SSISDataType>Boolean</SSISDataType>
+    <SSISExpression>DT_BOOL</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>numeric</SQLServerDataType>
+    <SSISDataType>numeric</SSISDataType>
+    <SSISExpression>DT_NUMERIC</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>decimal</SQLServerDataType>
+    <SSISDataType>decimal</SSISDataType>
+    <SSISExpression>DT_DECIMAL</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>smallmoney</SQLServerDataType>
+    <SSISDataType>currency</SSISDataType>
+    <SSISExpression>DT_CY</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>money</SQLServerDataType>
+    <SSISDataType>currency</SSISDataType>
+    <SSISExpression>DT_CY</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>uniqueidentifier</SQLServerDataType>
+    <SSISDataType>unique identifier</SSISDataType>
+    <SSISExpression>DT_GUID</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>binary</SQLServerDataType>
+    <SSISDataType>byte stream</SSISDataType>
+    <SSISExpression>DT_BYTES</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>varbinary</SQLServerDataType>
+    <SSISDataType>byte stream</SSISDataType>
+    <SSISExpression>DT_BYTES</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>timestamp</SQLServerDataType>
+    <SSISDataType>byte stream</SSISDataType>
+    <SSISExpression>DT_BYTES</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>date</SQLServerDataType>
+    <SSISDataType>database date</SSISDataType>
+    <SSISExpression>DT_DBDATE</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>time(p)</SQLServerDataType>
+    <SSISDataType>database time with precision</SSISDataType>
+    <SSISExpression>DT_DBTIME2</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>datetime</SQLServerDataType>
+    <SSISDataType>database timestamp</SSISDataType>
+    <SSISExpression>DT_DBTIMESTAMP</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>smalldatetime</SQLServerDataType>
+    <SSISDataType>database timestamp</SSISDataType>
+    <SSISExpression>DT_DBTIMESTAMP</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>datetime2</SQLServerDataType>
+    <SSISDataType>database timestamp with precision</SSISDataType>
+    <SSISExpression>DT_DBTIMESTAMP2</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>datetimeoffset(p)</SQLServerDataType>
+    <SSISDataType>database timestamp with timezone</SSISDataType>
+    <SSISExpression>DT_DBTIMESTAMPOFFSET</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>image</SQLServerDataType>
+    <SSISDataType>image</SSISDataType>
+    <SSISExpression>DT_IMAGE</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>text</SQLServerDataType>
+    <SSISDataType>text stream</SSISDataType>
+    <SSISExpression>DT_TEXT</SSISExpression>
+  </SQLServerToSSISDataTypes>
+  <SQLServerToSSISDataTypes>
+    <SQLServerDataType>ntext</SQLServerDataType>
+    <SSISDataType>Unicode string</SSISDataType>
+    <SSISExpression>DT_NTEXT</SSISExpression>
+  </SQLServerToSSISDataTypes>
+</DocumentElement>
