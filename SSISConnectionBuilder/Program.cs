@@ -27,20 +27,20 @@ using System.IO;
 using System.Data;
 using System.Data.OleDb;
 using System.Data.Common;
-using Microsoft.SqlServer.Dts.Runtime;
-using Microsoft.SqlServer.Dts.Runtime.Wrapper;
-using Microsoft.SqlServer.Dts.Pipeline.Wrapper;
+using System.Text;
+using System.Collections.Generic;
 using NDesk.Options;
 using Excel;
 
 namespace SSISConnectionBuilder
 {
-    class Program
+    class ConnectionBuilderMain
     {
         public static string SchemaFile;
         public static string Delimiter;
         public static string PackageName;
         public static string CSVFileName;
+        public static string ConnectionName;
         public static bool isUnicode = false;
 
         static void Main(string[] args)
@@ -61,9 +61,65 @@ namespace SSISConnectionBuilder
             if (parseerr == 1)
                 return;
 
+            int unicodeFlag = 0;
+            if (isUnicode)
+                unicodeFlag = 1;
+            else
+                unicodeFlag = 0;
+
+            Dictionary<string, string> options = new Dictionary<string, string>(){
+                {"RCNAME", "John Smith"},
+                {"RCOMPUTER", "Virtual"},
+                {"RDATE", DateTime.Now.ToString()},
+                {"RPNAME", PackageName},
+                {"RConnName", ConnectionName},
+                {"RConnDescription", "CSV File connection"},
+                {"RCDelimited", "Delimited"},
+                {"RConnSkip", "0"},
+                {"RConnUnicode", unicodeFlag.ToString()},
+                {"RConnHeaderRowDelimiter", DelimiterToHex("\r\n")},
+                {"RConnColumnNamesInFirstDataRow", "-1"},
+                {"RConnRowDelimiter", DelimiterToHex("\r\n")},
+                {"RConnDataRowsToSkip", "0"},
+                {"RConnTextQualifier", "\""},
+                {"RCConnCodePage", "1252"},
+                {"RConnConnectionString", CSVFileName}
+            };
+
+            Dictionary<string, string> ColOptions = new Dictionary<string, string>(){};
+
+            PackageBuilder pg = new PackageBuilder();
+
+            StringBuilder PackageXML = new StringBuilder();
+
+            ////build table to hold the SSIS DataTypes Enum mappings
+            DataTable SSISDataTypesEnum = new DataTable();
+            SSISDataTypesEnum.TableName = "SSISDataTypesEnum";
+
+            DataColumn[] SSISDataTypesEnumkeys = new DataColumn[2];
+            DataColumn SSISDataTypesEnumcolumn;
+
+            //set primary key
+            SSISDataTypesEnumcolumn = new DataColumn();
+            SSISDataTypesEnumcolumn.DataType = System.Type.GetType("System.String");
+            SSISDataTypesEnumcolumn.ColumnName = "SSISDataType";
+            SSISDataTypesEnum.Columns.Add(SSISDataTypesEnumcolumn);
+            SSISDataTypesEnumkeys[0] = SSISDataTypesEnumcolumn;
+
+            SSISDataTypesEnum.PrimaryKey = SSISDataTypesEnumkeys;
+
+            SSISDataTypesEnum.Columns.Add("NumericValue", Type.GetType("System.String"));
+
+            //read in data type conversions
+            using (Stream stream = typeof(ConnectionBuilderMain).Assembly.GetManifestResourceStream("SSISConnectionBuilder.SSISDataTypesEnum.xml"))
+            {
+                SSISDataTypesEnum.ReadXml(stream);
+            }
+
+
             //build table to hold the SSIS to SQL Server data type mappings
-            DataTable dt = new DataTable();
-            dt.TableName = "SQLServerToSSISDataTypes";
+            DataTable SQLServerToSSISDataTypes = new DataTable();
+            SQLServerToSSISDataTypes.TableName = "SQLServerToSSISDataTypes";
 
             DataColumn[] keys = new DataColumn[2];
             DataColumn column;
@@ -71,64 +127,22 @@ namespace SSISConnectionBuilder
             //set primary key
             column = new DataColumn();
             column.DataType = System.Type.GetType("System.String");
-            column.ColumnName= "SQLServerDataType";
-            dt.Columns.Add(column);
+            column.ColumnName = "SQLServerDataType";
+            SQLServerToSSISDataTypes.Columns.Add(column);
             keys[0] = column;
-            dt.PrimaryKey = keys;
-            dt.Columns.Add("SSISDataType", Type.GetType("System.String"));
-            dt.Columns.Add("SSISExpression", Type.GetType("System.String"));
+            SQLServerToSSISDataTypes.PrimaryKey = keys;
+            SQLServerToSSISDataTypes.Columns.Add("SSISDataType", Type.GetType("System.String"));
+            SQLServerToSSISDataTypes.Columns.Add("SSISExpression", Type.GetType("System.String"));
 
             //read in data type conversions
-            using (Stream stream = typeof(Program).Assembly.GetManifestResourceStream("SQLServerToSSISDataTypes.xml"))
+            using (Stream stream = typeof(ConnectionBuilderMain).Assembly.GetManifestResourceStream("SSISConnectionBuilder.SQLServerToSSISDataTypes.xml"))
             {
-                dt.ReadXml(stream);
+                SQLServerToSSISDataTypes.ReadXml(stream);
             }
 
-            string pkg = PackageName;
-
-            Microsoft.SqlServer.Dts.Runtime.Application app = new Microsoft.SqlServer.Dts.Runtime.Application();
-            Microsoft.SqlServer.Dts.Runtime.Package p = new Microsoft.SqlServer.Dts.Runtime.Package();
-
-            ConnectionManager ConMgr;
-            ConMgr = p.Connections.Add("FlatFile");
-
-            IDTSConnectionManagerFlatFile100 connectionFlatFile = (IDTSConnectionManagerFlatFile100)ConMgr.InnerObject;
-            ConMgr.ConnectionString = CSVFileName;
-            ConMgr.Name = "CSV";
-            ConMgr.Description = "CSV File connection";
-            connectionFlatFile.LocaleID = 1033;
-            connectionFlatFile.CodePage = 1252;
-            connectionFlatFile.Unicode = isUnicode;
-            connectionFlatFile.RowDelimiter = "\r\n";
-            connectionFlatFile.TextQualifier = "\"";
-            connectionFlatFile.HeaderRowDelimiter = "\r\n";
-            connectionFlatFile.ColumnNamesInFirstDataRow = true;
-            connectionFlatFile.Format = "Delimited";
-
-            /*
-            how to set values directly to the ConMgr
-            ConMgr.Properties["AlwaysCheckForRowDelimiters"].SetValue(ConMgr, false);
-            ConMgr.Properties["CodePage"].SetValue(ConMgr, 1252);
-            ConMgr.Properties["ColumnNamesInFirstDataRow"].SetValue(ConMgr, true);
-            ConMgr.Properties["Columns"].SetValue(ConMgr, "");
-            ConMgr.Properties["ConnectionString"].SetValue(ConMgr, "");
-            ConMgr.Properties["CreationName"].SetValue(ConMgr, "");
-            ConMgr.Properties["DataRowsToSkip"].SetValue(ConMgr, 0);
-            ConMgr.Properties["Description"].SetValue(ConMgr, "");
-            ConMgr.Properties["FileUsageType"].SetValue(ConMgr, "");
-            ConMgr.Properties["Format"].SetValue(ConMgr, "Delimited");
-            ConMgr.Properties["HeaderRowDelimiter"].SetValue(ConMgr, "\r\n");
-            ConMgr.Properties["HeaderRowsToSkip"].SetValue(ConMgr, 0);
-            ConMgr.Properties["ID"].SetValue(ConMgr, "");
-            ConMgr.Properties["LocaleID"].SetValue(ConMgr, "");
-            ConMgr.Properties["Name"].SetValue(ConMgr, "");
-            ConMgr.Properties["ProtectionLevel"].SetValue(ConMgr, "");
-            ConMgr.Properties["RowDelimiter"].SetValue(ConMgr, "\r\n");
-            ConMgr.Properties["Scope"].SetValue(ConMgr, "");
-            ConMgr.Properties["SupportsDTCTransactions"].SetValue(ConMgr, false);
-            ConMgr.Properties["TextQualifier"].SetValue(ConMgr, "\"");
-            ConMgr.Properties["Unicode"].SetValue(ConMgr, false);
-            */
+            StringBuilder pkg = new StringBuilder();
+            pkg.Append(pg.PackageHeader(options));
+            pkg.Append(pg.ConnectionManagerHeader(options));
 
             var filePath = SchemaFile;
             FileStream excelStream;
@@ -144,9 +158,8 @@ namespace SSISConnectionBuilder
             IExcelDataReader excelReader = ExcelReaderFactory.CreateOpenXmlReader(excelStream);
             excelReader.IsFirstRowAsColumnNames = true;
             DataSet result = excelReader.AsDataSet();
-            
-            IDTSConnectionManagerFlatFileColumn100 flatFileColumn = null;
-            int rc = 1;
+
+            int rc = 2;
             foreach (DataRow row in result.Tables[0].Rows)
             {
                 if (row[0].ToString().Length == 0)
@@ -163,322 +176,78 @@ namespace SSISConnectionBuilder
                 {
                     dataType = "ntext";
                 }
-
-                flatFileColumn = (IDTSConnectionManagerFlatFileColumn100)connectionFlatFile.Columns.Add();
-                flatFileColumn.ColumnType = "Delimited";
-                flatFileColumn.DataType = findSSISType(dataType, dt);
-                IDTSName100 columnName = (IDTSName100)flatFileColumn;
-                columnName.Name = row[0].ToString();
-
-                //Column	Type	Precision	Scale
-                //Console.WriteLine(row[0].ToString());
-                //Console.WriteLine(dataType);
-                //Console.WriteLine(row[2].ToString());
-
-                if (dataType == "smallint")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "int")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "bigint")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "tinyint")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "real")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "float")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "char")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "nchar")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "varchar")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "nvarchar")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "sql_variant")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "xml")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "date")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "bit")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "decimal")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = Convert.ToInt32(row[2].ToString()); ;
-                    flatFileColumn.DataScale = Convert.ToInt32(row[3].ToString()); ;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "numeric")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = Convert.ToInt32(row[2].ToString()); ;
-                    flatFileColumn.DataScale = Convert.ToInt32(row[3].ToString()); ;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "smallmoney")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "money")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "uniqueidentifier")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "binary")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "varbinary")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "timestamp")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "date")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "time(p)")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "datetime")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "smalldatetime")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "datetime2")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "datetimeoffset(p)")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = Convert.ToInt32(row[2].ToString());
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "image")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.MaximumWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = false;
-                }
-
-                if (dataType == "text")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
-
-                if (dataType == "ntext")
-                {
-                    flatFileColumn.ColumnWidth = 0;
-                    flatFileColumn.DataPrecision = 0;
-                    flatFileColumn.DataScale = 0;
-                    flatFileColumn.TextQualified = true;
-                }
+                ColOptions = new Dictionary<string, string>(){
+                    {"RColColumnType", "Delimited"},
+                    {"RColColumnWidth", "0"},
+                    {"RColMaximumWidth", row[2].ToString()},
+                    {"RColDataType", findSSISTypeEnum(findSSISType(dataType,SQLServerToSSISDataTypes),SSISDataTypesEnum)},
+                    {"RColDataPrecision", row[2].ToString()},
+                    {"RColDataScale", row[3].ToString()},
+                    {"RColObjectName", row[0].ToString()},
+                    {"RColDescription", ""},
+                    {"RColSQLDataType", dataType}
+                };
 
                 //if this is the last column set the delimiter to control linefeed instead of your row delimiter
                 if (result.Tables[0].Rows.Count == rc)
                 {
-                    flatFileColumn.ColumnDelimiter = "\r\n";
+                    Console.WriteLine(DelimiterToHex("\r\n"));
+                    Console.WriteLine("Last Column");
+                    ColOptions.Add("RColColumnDelimiter", DelimiterToHex("\r\n"));
                 }
                 else
                 {
-                    flatFileColumn.ColumnDelimiter = Delimiter;
+                    Console.WriteLine("Column");
+                    ColOptions.Add("RColColumnDelimiter", DelimiterToHex(","));
                 }
                 rc++;
+                pkg.Append(pg.FlatFileColumn(ColOptions));
             }
 
             excelReader.Close();
 
+            pkg.Append(pg.ConnectionManagerEnd(options));
+            pkg.Append(pg.PackageEnd(options));
+
+            using (StreamWriter outfile = new StreamWriter(PackageName))
+            {
+                outfile.Write(pkg);
+            }
+
             //write to file system
-            app.SaveToXml(pkg, p, null);
+            //app.SaveToXml(pkg, p, null);
             Console.WriteLine("Done, Any Key To Continue:");
             Console.ReadKey();
         }
 
-        private static DataType findSSISType(string sqltype,DataTable dt)
+        public static String DelimiterToHex(String data)
+        {
+            String output = String.Empty;
+            foreach (Char c in data)
+            {
+                output += "_x00" + ((int)c).ToString("X2") + "_";
+            }
+            return output;
+        }
+
+        private static string findSSISType(string sqltype, DataTable dt)
         {
             DataRow foundRow = dt.Rows.Find(sqltype);
-            DataType retdt = new DataType();
+            string retdt = "";
             if (foundRow != null)
             {
-                retdt = (DataType) Enum.Parse(typeof(DataType),foundRow[2].ToString());
+                retdt = foundRow[2].ToString();
+            }
+            return retdt;
+        }
+
+        private static string findSSISTypeEnum(string sqltype, DataTable dt)
+        {
+            DataRow foundRow = dt.Rows.Find(sqltype);
+            string retdt = "";
+            if (foundRow != null)
+            {
+                retdt = foundRow[1].ToString();
             }
             return retdt;
         }
@@ -500,9 +269,13 @@ namespace SSISConnectionBuilder
              { "c:|csvfilename:", "Name of the csv file that your connection will use.",
               v => CSVFileName = v},
 
-             { "u|unicode", "csv file is unicode.", v => isUnicode = v  != null },
+              { "n:|connectionname:", "The name connection will use inside the package.",
+              v => ConnectionName = v},
 
-              { "?|h|help",  "show this message and exit", 
+             { "u|unicode", "csv file is unicode.", 
+                 v => isUnicode = v  != null },
+
+             { "?|h|help",  "show this message and exit", 
               v => showHelp = v != null },
             };
 
@@ -529,7 +302,8 @@ namespace SSISConnectionBuilder
             if (SchemaFile == null ||
                 Delimiter == null ||
                 PackageName == null ||
-                CSVFileName == null
+                CSVFileName == null ||
+                ConnectionName == null
                 && !showHelp
             )
             {
@@ -563,21 +337,6 @@ namespace SSISConnectionBuilder
             Console.WriteLine();
             Console.WriteLine("Options:");
             p.WriteOptionDescriptions(Console.Out);
-        }
-
-        public string GetResourceTextFile(string filename)
-        {
-            string result = string.Empty;
-
-            using (Stream stream = this.GetType().Assembly.
-                       GetManifestResourceStream("assembly.folder." + filename))
-            {
-                using (StreamReader sr = new StreamReader(stream))
-                {
-                    result = sr.ReadToEnd();
-                }
-            }
-            return result;
         }
     }
 }
